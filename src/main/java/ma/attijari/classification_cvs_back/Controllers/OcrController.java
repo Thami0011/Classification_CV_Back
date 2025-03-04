@@ -9,6 +9,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 
 
 @RequestMapping("/api")
@@ -20,7 +23,7 @@ public class OcrController {
     private OCR ocrService;
 
 
-    @PostMapping("/ocr2")
+    @PostMapping("/ocrsingle")
     public ResponseEntity<String> extractTextFromPdf(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body("File is empty");
@@ -34,6 +37,27 @@ public class OcrController {
         } catch (OCRProcessingException e) {
             return ResponseEntity.internalServerError().body("OCR processing error: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/ocrbatch")
+    public ResponseEntity<List<String>> extractTextFromBatch(@RequestParam("file") List<MultipartFile> files) {
+        if (files == null || files.isEmpty()) {
+            return ResponseEntity.badRequest().body(Collections.singletonList("No files sent"));
+        }
+
+        List<String> extractedTexts = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            try {
+                extractedTexts.add(ocrService.scanDocument(file));
+            } catch (IOException e) {
+                return ResponseEntity.internalServerError().body(Collections.singletonList("File processing error: " + e.getMessage()));
+            } catch (OCRProcessingException e) {
+                return ResponseEntity.internalServerError().body(Collections.singletonList("OCR processing error: " + e.getMessage()));
+            }
+        }
+
+        return ResponseEntity.ok(extractedTexts);
     }
 }
 
